@@ -262,7 +262,13 @@
         </section>
 
         <section class="screen" id="chat">
-          <h2 class="screen-title">Conversa</h2>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <h2 class="screen-title" style="margin-bottom:0">Conversa</h2>
+            <div style="display:flex;gap:14px">
+              <button class="link" onclick="saveConversation()">Salvar</button>
+              <button class="link" onclick="clearConversation()">Limpar</button>
+            </div>
+          </div>
           <p class="screen-sub">Digite livremente. A inteligência artificial responde com linguagem inspirada nos ensinamentos cristãos e referências bíblicas.</p>
           <div class="chat-wrap">
             <div class="chat-messages" id="chatMessages">
@@ -548,6 +554,8 @@ function makePrayer(type){
 // FUNÇÕES DE CHAT BLINDADAS E IA CORRIGIDA
 // ==========================================
 
+let conversationHistory = [];
+
 async function addUser(text, ref = null){
   const box=document.getElementById('chatMessages');
   box.insertAdjacentHTML('beforeend',`<div class="msg user"><div class="bubble">${escapeHtml(text)}</div></div>`);
@@ -563,7 +571,7 @@ async function addUser(text, ref = null){
 
 async function addAssistant(text, ref = null){
   const box=document.getElementById('chatMessages');
-  box.insertAdjacentHTML('beforeend',`<div class="msg assistant"><div><div class="msg-label">Jesus · IA de Reflexão</div><div class="bubble">${text}${ref?`<div class="ref-chip">${ref}</div>`:''}</div></div></div>`);
+  box.insertAdjacentHTML('beforeend',`<div class="msg assistant"><div><div class="msg-label">Jesus · IA de Reflexão</div><div class="bubble">${escapeHtml(text)}${ref?`<div class="ref-chip">${escapeHtml(ref)}</div>`:''}</div></div></div>`);
   box.scrollTop=box.scrollHeight;
 
   if(currentUser) {
@@ -588,19 +596,23 @@ async function sendMessage(){
   addUser(t);
   addTyping();
 
+  const historyForRequest = [...conversationHistory];
+  conversationHistory.push({ role: 'user', text: t });
+
   try {
     // Chama a função serverless (api/chat.js), que guarda a chave no servidor
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: t })
+      body: JSON.stringify({ message: t, history: historyForRequest })
     });
 
     const data = await response.json();
     document.getElementById('typing')?.remove();
 
     if(response.ok && data.text) {
-      addAssistant(data.text, null);
+      addAssistant(data.text, data.reference || null);
+      conversationHistory.push({ role: 'assistant', text: data.text });
     } else {
       console.error("Retorno da API /api/chat:", data);
       addAssistant("Que a paz esteja com você. Pensemos com calma sobre isso hoje.", "Salmos 46:1");
@@ -610,6 +622,31 @@ async function sendMessage(){
     document.getElementById('typing')?.remove();
     console.error("Erro na requisição da IA:", e);
     addAssistant("Houve um pequeno problema de conexão com a inteligência artificial. Tente novamente em instantes.", "Filipenses 4:6");
+  }
+}
+
+function clearConversation(){
+  const box=document.getElementById('chatMessages');
+  box.innerHTML = `<div class="msg assistant">
+    <div>
+      <div class="msg-label">Jesus · IA de Reflexão</div>
+      <div class="bubble">Que bom ter você aqui. Conte o que está pesando no seu coração hoje. Podemos refletir juntos, com calma.<div class="ref-chip">Mateus 11:28</div></div>
+    </div>
+  </div>`;
+  conversationHistory = [];
+  showToast('Conversa limpa');
+}
+
+function saveConversation(){
+  if(conversationHistory.length === 0){ showToast('Nada para salvar ainda'); return; }
+  try {
+    const saved = JSON.parse(localStorage.getItem('conversasSalvas') || '[]');
+    saved.push({ date: new Date().toISOString(), messages: conversationHistory });
+    localStorage.setItem('conversasSalvas', JSON.stringify(saved));
+    showToast('Conversa salva neste dispositivo');
+  } catch(e) {
+    console.error('Erro ao salvar conversa localmente:', e);
+    showToast('Não foi possível salvar a conversa');
   }
 }
 
