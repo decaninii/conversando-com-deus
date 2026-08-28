@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   try {
     const promptSistema = "Você é um assistente digital em um aplicativo de reflexão cristã. Responda com linguagem acolhedora, serena, inspirada nos ensinamentos dos Evangelhos e traga sempre que possível uma referência ou versículo bíblico relevante. Lembre-se: você não é Jesus e não fala em nome de Deus, seu papel é apoiar a reflexão e a fé.";
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
