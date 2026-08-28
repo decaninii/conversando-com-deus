@@ -40,27 +40,51 @@ Se não houver referência relevante, use "reference": null.`;
     }
     contents.push({ role: 'user', parts: [{ text: message }] });
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { role: 'system', parts: [{ text: promptSistema }] },
-        contents,
-        generationConfig: {
-          maxOutputTokens: 400,
-          responseMimeType: 'application/json',
-          thinkingConfig: { thinkingBudget: 0 }
-        }
-      })
-    });
+    const requestBody = {
+      systemInstruction: { role: 'system', parts: [{ text: promptSistema }] },
+      contents,
+      generationConfig: {
+        maxOutputTokens: 512,
+        responseMimeType: 'application/json',
+        thinkingConfig: { thinkingBudget: 0 }
+      }
+    };
 
-    const data = await response.json();
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-    if (!response.ok || data.error) {
+    async function chamarGemini(model) {
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+      const json = await resp.json();
+      return { ok: resp.ok, data: json };
+    }
+
+    // Tenta o modelo principal com uma nova tentativa em caso de sobrecarga (503),
+    // e cai para um modelo alternativo se ainda assim continuar indisponível.
+    const modelosParaTentar = ['gemini-flash-latest', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
+    let resultado;
+    for (let i = 0; i < modelosParaTentar.length; i++) {
+      resultado = await chamarGemini(modelosParaTentar[i]);
+      const codigoErro = resultado.data?.error?.code;
+      if (resultado.ok && !resultado.data.error) break;
+      if (codigoErro !== 503) break; // só insiste em caso de sobrecarga (503)
+      if (i < modelosParaTentar.length - 1) await sleep(600);
+    }
+
+    const { ok: response_ok, data } = resultado;
+
+    if (!response_ok || data.error) {
       console.error('Erro retornado pela API do Gemini:', JSON.stringify(data));
     }
 
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!rawText) {
+      console.error('Gemini não retornou texto. finishReason:', data.candidates?.[0]?.finishReason, '| promptFeedback:', JSON.stringify(data.promptFeedback), '| resposta completa:', JSON.stringify(data));
+    }
 
     let text = 'Desculpe, não consegui refletir sobre isso neste momento. Tente novamente em breve.';
     let reference = null;

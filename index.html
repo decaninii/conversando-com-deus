@@ -262,15 +262,14 @@
         </section>
 
         <section class="screen" id="chat">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <h2 class="screen-title" style="margin-bottom:0">Conversa</h2>
-            <div style="display:flex;gap:14px">
-              <button class="link" onclick="saveConversation()">Salvar</button>
-              <button class="link" onclick="clearConversation()">Limpar</button>
-            </div>
-          </div>
+          <h2 class="screen-title">Conversa</h2>
           <p class="screen-sub">Digite livremente. A inteligência artificial responde com linguagem inspirada nos ensinamentos cristãos e referências bíblicas.</p>
-          <div class="chat-wrap">
+          <div class="theme-row">
+            <button class="theme active" id="tabConversaBtn" onclick="showChatTab('conversa')">Conversa</button>
+            <button class="theme" id="tabSalvasBtn" onclick="showChatTab('salvas')">Conversas salvas</button>
+          </div>
+
+          <div class="chat-wrap" id="chatLivePanel">
             <div class="chat-messages" id="chatMessages">
               <div class="msg assistant">
                 <div>
@@ -288,10 +287,18 @@
               <button class="chip" onclick="quickChat('Estou me sentindo sozinho.')">Solidão</button>
               <button class="chip" onclick="quickChat('Quero agradecer por algo bom.')">Gratidão</button>
             </div>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <button class="secondary" style="flex:1" onclick="saveConversation()">💾 Salvar conversa</button>
+              <button class="secondary" style="flex:1" onclick="clearConversation()">🗑️ Limpar</button>
+            </div>
             <div class="composer">
               <textarea id="chatInput" rows="1" placeholder="Escreva o que você está sentindo..."></textarea>
               <button class="send" onclick="sendMessage()">➤</button>
             </div>
+          </div>
+
+          <div id="chatSavedPanel" style="display:none">
+            <div class="list" id="savedConversationsList"></div>
           </div>
         </section>
 
@@ -643,11 +650,56 @@ function saveConversation(){
     const saved = JSON.parse(localStorage.getItem('conversasSalvas') || '[]');
     saved.push({ date: new Date().toISOString(), messages: conversationHistory });
     localStorage.setItem('conversasSalvas', JSON.stringify(saved));
-    showToast('Conversa salva neste dispositivo');
+    showToast('Conversa salva');
   } catch(e) {
-    console.error('Erro ao salvar conversa localmente:', e);
+    console.error('Erro ao salvar conversa:', e);
     showToast('Não foi possível salvar a conversa');
   }
+}
+
+function showChatTab(tab){
+  document.getElementById('chatLivePanel').style.display = tab === 'conversa' ? 'flex' : 'none';
+  document.getElementById('chatSavedPanel').style.display = tab === 'salvas' ? 'block' : 'none';
+  document.getElementById('tabConversaBtn').classList.toggle('active', tab === 'conversa');
+  document.getElementById('tabSalvasBtn').classList.toggle('active', tab === 'salvas');
+  if(tab === 'salvas') renderSavedConversations();
+}
+
+function renderSavedConversations(){
+  const list = document.getElementById('savedConversationsList');
+  const saved = JSON.parse(localStorage.getItem('conversasSalvas') || '[]');
+  if(saved.length === 0){
+    list.innerHTML = '<p class="screen-sub">Nenhuma conversa salva ainda. Toque em "Salvar conversa" durante uma conversa para guardá-la aqui.</p>';
+    return;
+  }
+  list.innerHTML = saved.slice().reverse().map((c, i) => {
+    const realIndex = saved.length - 1 - i;
+    const date = new Date(c.date).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    let preview = c.messages.find(m => m.role === 'user')?.text || 'Conversa';
+    if(preview.length > 60) preview = preview.slice(0, 60) + '…';
+    return `<div class="item">
+      <div class="item-icon">💬</div>
+      <div class="item-copy"><strong>${escapeHtml(preview)}</strong><span>${date} · ${c.messages.length} mensagens</span></div>
+      <button class="mini-btn" onclick="openSavedConversation(${realIndex})">Ver</button>
+    </div>`;
+  }).join('');
+}
+
+function openSavedConversation(index){
+  const saved = JSON.parse(localStorage.getItem('conversasSalvas') || '[]');
+  const conv = saved[index];
+  if(!conv) return;
+  const box = document.getElementById('chatMessages');
+  box.innerHTML = conv.messages.map(m => {
+    if(m.role === 'user'){
+      return `<div class="msg user"><div class="bubble">${escapeHtml(m.text)}</div></div>`;
+    }
+    return `<div class="msg assistant"><div><div class="msg-label">Jesus · IA de Reflexão</div><div class="bubble">${escapeHtml(m.text)}</div></div></div>`;
+  }).join('');
+  conversationHistory = JSON.parse(JSON.stringify(conv.messages));
+  showChatTab('conversa');
+  box.scrollTop = box.scrollHeight;
+  showToast('Conversa carregada');
 }
 
 function quickChat(t){go('chat');setTimeout(()=>{document.getElementById('chatInput').value=t;sendMessage()},80)}
