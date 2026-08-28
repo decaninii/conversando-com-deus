@@ -27,6 +27,11 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+
+    if (!response.ok || data.error) {
+      console.error('Erro retornado pela API do Gemini:', JSON.stringify(data));
+    }
+
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui refletir sobre isso neste momento. Tente novamente em breve.";
 
     return res.status(200).json({ text: reply });
