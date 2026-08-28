@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Conversando com Jesus — BETA</title>
+<!-- Biblioteca do Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#f4efe6;
+    --card:#fffaf2;
+    --ink:#2a241d;
+    --muted:#7d7267;
+    --gold:#b88a3b;
+    --gold2:#d9b66c;
+    --dark:#171512;
+    --line:rgba(42,36,29,.10);
+    --shadow:0 18px 55px rgba(63,42,12,.10);
+    --success:#5b7755;
+    --danger:#9b534b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:
+    radial-gradient(circle at 15% 0%, rgba(217,182,108,.20), transparent 32%),
+    linear-gradient(180deg,#eee4d5,#f7f3ec 50%,#eee8df);
+    color:var(--ink);font-family:Inter, ui-sans-serif, system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    min-height:100%;
+  }
+  button,input,textarea,select{font:inherit}
+  button{cursor:pointer}
+  .page-shell{min-height:100vh;display:grid;place-items:center;padding:24px}
+  .phone{
+    width:min(430px,100%);
+    height:min(900px,calc(100vh - 36px));
+    min-height:680px;
+    background:var(--bg);
+    border:8px solid #161616;
+    border-radius:42px;
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,.25);
+  }
+  .notch{
+    position:absolute;z-index:50;left:50%;top:10px;transform:translateX(-50%);
+    width:112px;height:28px;border-radius:20px;background:#050505;
+  }
+  .status{
+    height:48px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 22px 0 24px;font-size:12px;font-weight:700;position:relative;z-index:20;
+  }
+  .app{
+    height:calc(100% - 48px);
+    position:relative;
+    display:flex;flex-direction:column;
+  }
+  .topbar{
+    padding:10px 20px 12px;display:flex;align-items:center;justify-content:space-between;
+  }
+  .brand{display:flex;gap:10px;align-items:center}
+  .brand-mark{
+    width:36px;height:36px;border-radius:14px;
+    background:linear-gradient(145deg,#d8b266,#a9782c);
+    color:#fff;display:grid;place-items:center;font-family:Georgia,serif;font-size:22px;
+    box-shadow:0 8px 24px rgba(184,138,59,.28)
+  }
+  .brand h1{font:700 18px Georgia,serif;margin:0}
+  .beta{font:700 9px ui-sans-serif;background:#201d18;color:#f2d594;padding:4px 7px;border-radius:999px;letter-spacing:.08em}
+  .iconbtn{
+    border:1px solid var(--line);background:rgba(255,255,255,.45);width:38px;height:38px;border-radius:13px;
+    display:grid;place-items:center;color:var(--ink)
+  }
+  .content{flex:1;overflow:auto;padding:0 18px 92px;scrollbar-width:none}
+  .content::-webkit-scrollbar{display:none}
+  .screen{display:none;animation:fade .18s ease}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:.3;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:10px;font-weight:800;color:var(--gold)}
+  .hero{
+    margin-top:8px;background:
+      radial-gradient(circle at 80% 20%, rgba(255,255,255,.18), transparent 22%),
+      linear-gradient(145deg,#27231e,#171512);
+    color:#fff;border-radius:28px;padding:24px;position:relative;overflow:hidden;
+    box-shadow:var(--shadow)
+  }
+  .hero:after{
+    content:"✦";position:absolute;right:20px;top:8px;font-size:74px;color:rgba(216,178,102,.11)
+  }
+  .hero h2{font:600 30px/1.05 Georgia,serif;margin:8px 0 10px;max-width:270px}
+  .hero p{color:#ddd2c2;line-height:1.5;font-size:13px;margin:0 0 18px}
+  .primary{
+    border:0;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#201a12;
+    padding:13px 18px;border-radius:16px;font-weight:800;box-shadow:0 9px 24px rgba(184,138,59,.25);width:100%
+  }
+  .secondary{
+    border:1px solid var(--line);background:rgba(255,255,255,.56);color:var(--ink);padding:12px 15px;border-radius:15px;font-weight:750
+  }
+  .section-head{display:flex;align-items:end;justify-content:space-between;margin:24px 2px 12px}
+  .section-head h3{font:700 19px Georgia,serif;margin:0}
+  .link{border:0;background:none;color:var(--gold);font-size:12px;font-weight:750}
+  .quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .quick{
+    border:1px solid var(--line);background:rgba(255,250,242,.85);padding:15px;border-radius:20px;text-align:left;
+    min-height:115px;box-shadow:0 8px 24px rgba(74,55,27,.05)
+  }
+  .quick .qicon{font-size:23px;margin-bottom:14px}
+  .quick strong{display:block;font-size:14px;margin-bottom:4px}
+  .quick span{font-size:11px;color:var(--muted);line-height:1.35}
+  .verse-card{
+    background:linear-gradient(145deg,#fffaf2,#eee3d3);
+    border:1px solid rgba(184,138,59,.22);border-radius:22px;padding:18px;position:relative
+  }
+  .verse-card blockquote{margin:8px 0 10px;font:500 19px/1.35 Georgia,serif}
+  .verse-ref{font-size:12px;color:var(--gold);font-weight:800}
+  .heart{position:absolute;right:14px;top:14px;border:0;background:none;font-size:20px}
+  .nav{
+    height:76px;position:absolute;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(5,1fr);
+    background:rgba(249,245,238,.94);backdrop-filter:blur(16px);border-top:1px solid var(--line);z-index:25;
+    padding-bottom:max(6px,env(safe-area-inset-bottom))
+  }
+  .nav button{border:0;background:none;color:#80776e;font-size:10px;font-weight:700;display:grid;place-items:center;gap:3px;padding:8px 0}
+  .nav button .ni{font-size:20px;line-height:1}
+  .nav button.active{color:var(--gold)}
+  .screen-title{font:700 28px Georgia,serif;margin:4px 0 5px}
+  .screen-sub{font-size:12px;color:var(--muted);margin:0 0 18px;line-height:1.45}
+  .chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 236px);min-height:520px}
+  .chat-messages{flex:1;overflow:auto;padding:8px 0 12px;scrollbar-width:none}
+  .msg{display:flex;margin:10px 0}
+  .msg.user{justify-content:flex-end}
+  .bubble{
+    max-width:83%;padding:13px 14px;border-radius:18px;font-size:13px;line-height:1.48;
+    box-shadow:0 4px 12px rgba(0,0,0,.04)
+  }
+  .assistant .bubble{background:#fffaf2;border:1px solid var(--line);border-bottom-left-radius:5px}
+  .user .bubble{background:#28241f;color:#fff;border-bottom-right-radius:5px}
+  .msg-label{font-size:9px;color:var(--muted);margin:0 0 4px 2px}
+  .ref-chip{display:inline-block;margin-top:8px;padding:5px 8px;border-radius:999px;background:#f0e4cf;color:#8c692d;font-size:10px;font-weight:800}
+  .chips{display:flex;gap:7px;overflow:auto;padding:2px 0 8px;scrollbar-width:none}
+  .chip{white-space:nowrap;border:1px solid var(--line);background:#fffaf2;padding:8px 10px;border-radius:999px;font-size:10px}
+  .composer{
+    display:flex;gap:8px;background:rgba(255,250,242,.92);border:1px solid var(--line);border-radius:18px;padding:8px;
+  }
+  .composer textarea{flex:1;resize:none;border:0;outline:0;background:transparent;min-height:38px;max-height:90px;padding:9px 8px;font-size:13px;color:var(--ink)}
+  .send{width:40px;height:40px;border:0;border-radius:13px;background:#211e1a;color:#fff;align-self:end}
+  .typing{display:inline-flex;gap:4px;align-items:center}
+  .typing i{width:5px;height:5px;border-radius:50%;background:#8a8178;animation:bounce 1s infinite}
+  .typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,60%,100%{transform:none}30%{transform:translateY(-4px)}}
+  .searchbar{display:flex;gap:8px;background:#fffaf2;border:1px solid var(--line);border-radius:16px;padding:11px 12px;margin:8px 0 14px}
+  .searchbar input{border:0;outline:0;background:transparent;width:100%;font-size:13px}
+  .theme-row{display:flex;gap:7px;overflow:auto;margin-bottom:14px;scrollbar-width:none}
+  .theme{white-space:nowrap;border:1px solid var(--line);background:#f8f2e8;border-radius:999px;padding:7px 10px;font-size:10px}
+  .theme.active{background:#2a251f;color:#fff}
+  .list{display:grid;gap:10px}
+  .item{
+    background:#fffaf2;border:1px solid var(--line);border-radius:19px;padding:14px;display:flex;gap:12px;align-items:center
+  }
+  .item-icon{width:43px;height:43px;border-radius:14px;background:#efe2cd;display:grid;place-items:center;font-size:20px;flex:0 0 auto}
+  .item-copy{min-width:0;flex:1}
+  .item-copy strong{display:block;font-size:13px;margin-bottom:4px}
+  .item-copy span{font-size:11px;color:var(--muted);line-height:1.35;display:block}
+  .mini-btn{border:0;background:#2a251f;color:white;padding:8px 10px;border-radius:11px;font-size:10px}
+  .prayer-player{
+    background:linear-gradient(150deg,#1d1a17,#322b23);color:#fff;border-radius:24px;padding:20px;margin-bottom:15px
+  }
+  .prayer-player h3{font:700 20px Georgia,serif;margin:5px 0}
+  .prayer-player p{font-size:12px;color:#d3c6b5;line-height:1.5}
+  .progress{height:4px;background:#4e453b;border-radius:99px;margin:18px 0;overflow:hidden}
+  .progress span{display:block;height:100%;width:32%;background:#d8b266}
+  .player-actions{display:flex;justify-content:center;gap:12px}
+  .player-actions button{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.15);background:#2a251f;color:#fff}
+  .player-actions .play{background:#d8b266;color:#1b1712;border:0}
+  .profile-card{background:#fffaf2;border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:12px}
+  .profile-card h3{font:700 18px Georgia,serif;margin:0 0 4px}
+  .setting{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-top:1px solid var(--line);gap:12px}
+  .setting:first-of-type{margin-top:10px}
+  .setting .left strong{display:block;font-size:12px}.setting .left span{font-size:10px;color:var(--muted)}
+  .toggle{width:42px;height:24px;border-radius:99px;background:#cfc7bc;position:relative;border:0}
+  .toggle:after{content:"";position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s}
+  .toggle.on{background:#b88a3b}.toggle.on:after{left:21px}
+  .notice{font-size:10px;line-height:1.45;color:#7d7267;background:#eee6da;border-radius:14px;padding:11px 12px;margin:12px 0}
+  .modal{
+    position:absolute;inset:0;background:rgba(19,16,13,.56);backdrop-filter:blur(8px);z-index:100;
+    display:none;align-items:end
+  }
+  .modal.show{display:flex}
+  .sheet{width:100%;background:#f8f3eb;border-radius:28px 28px 0 0;padding:24px 20px 30px;box-shadow:0 -25px 70px rgba(0,0,0,.25)}
+  .sheet h2{font:700 25px Georgia,serif;margin:6px 0 10px}.sheet p{font-size:12px;color:var(--muted);line-height:1.5}
+  .sheet-actions{display:grid;gap:9px;margin-top:16px}
+  .sheet-actions button{width:100%}
+  .onboarding{
+    position:absolute;inset:0;z-index:120;background:
+      radial-gradient(circle at 50% 15%, rgba(216,178,102,.23), transparent 25%),
+      linear-gradient(180deg,#1c1915,#0f0e0c);
+    color:white;padding:50px 28px 30px;display:flex;flex-direction:column;justify-content:space-between;overflow-y:auto;
+  }
+  .onboarding.hidden{display:none}
+  .cross{font:500 45px Georgia,serif;color:#d8b266;text-shadow:0 10px 35px rgba(216,178,102,.3);margin-bottom:5px}
+  .onboarding h1{font:600 32px/1 Georgia,serif;margin:5px 0}
+  .onboarding p{color:#cfc6ba;font-size:12px;line-height:1.45;margin-bottom:15px}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:rgba(216,178,102,.12);border:1px solid rgba(216,178,102,.25);color:#edce8f;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:700}
+  
+  .auth-form{display:grid;gap:10px;margin-bottom:15px}
+  .auth-input{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:#fff;font-size:13px;outline:none}
+  .auth-input::placeholder{color:#998d80}
+  .auth-row{display:flex;gap:8px}
+  .auth-row button{flex:1;padding:12px;border-radius:14px;font-weight:700;font-size:12px}
+  .btn-signin{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#201a12;border:0}
+  .btn-signup{background:transparent;color:#edce8f;border:1px solid rgba(216,178,102,.4)}
+
+  .onboarding small{display:block;color:#948a7f;font-size:9px;line-height:1.45;text-align:center}
+  .toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:#1f1b17;color:#fff;padding:9px 12px;border-radius:999px;font-size:10px;opacity:0;pointer-events:none;transition:.2s;z-index:80;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media(max-width:520px){
+    .page-shell{padding:0}
+    .phone{width:100vw;height:100vh;min-height:100vh;border:0;border-radius:0}
+  }
+</style>
+</head>
+<body>
+<div class="page-shell">
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status"><span>9:41</span><span>● ●● 100%</span></div>
+
+    <div class="app">
+      <div class="topbar">
+        <div class="brand">
+          <div class="brand-mark">†</div>
+          <div><h1>Conversando com Jesus</h1><span class="beta">BETA</span></div>
+        </div>
+        <button class="iconbtn" onclick="openInfo()">ⓘ</button>
+      </div>
+
+      <main class="content">
+        <section class="screen active" id="home">
+          <div class="hero">
+            <div class="eyebrow">Seu momento de fé</div>
+            <h2>Como está seu coração hoje?</h2>
+            <p>Converse, reflita e encontre passagens bíblicas para o momento que você está vivendo.</p>
+            <button class="primary" onclick="go('chat')">Conversar agora</button>
+            <button class="secondary" style="margin-top:8px;width:100%;background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.16)" onclick="startDemoConversation()">Simular conversa</button>
+          </div>
+
+          <div class="section-head"><h3>Atalhos</h3></div>
+          <div class="quick-grid">
+            <button class="quick" onclick="go('bible')"><div class="qicon">📖</div><strong>Versículo</strong><span>Encontre uma passagem por tema.</span></button>
+            <button class="quick" onclick="go('prayers')"><div class="qicon">🙏</div><strong>Oração guiada</strong><span>Leia ou ouça uma oração.</span></button>
+            <button class="quick" onclick="quickChat('Estou ansioso e preciso de uma palavra de conforto.')"><div class="qicon">🕊️</div><strong>Preciso de paz</strong><span>Uma conversa para desacelerar.</span></button>
+            <button class="quick" onclick="openPrayerComposer()"><div class="qicon">✨</div><strong>Criar oração</strong><span>Monte uma oração para sua intenção.</span></button>
+          </div>
+
+          <div class="section-head"><h3>Palavra para hoje</h3><button class="link" onclick="shuffleVerse()">Trocar</button></div>
+          <div class="verse-card" id="dailyVerse">
+            <button class="heart" onclick="toggleFavorite()">♡</button>
+            <div class="eyebrow">Reflexão do dia</div>
+            <blockquote id="verseText">“Entregue seus caminhos ao Senhor e confie nele.”</blockquote>
+            <div class="verse-ref" id="verseRef">Salmos 37:5 · paráfrase</div>
+          </div>
+
+          <div class="notice">Este BETA usa IA real e linguagem inspirada nos Evangelhos. Ele não representa uma comunicação literal com Jesus nem substitui orientação religiosa, médica ou psicológica.</div>
+        </section>
+
+        <section class="screen" id="chat">
+          <h2 class="screen-title">Conversa</h2>
+          <p class="screen-sub">Digite livremente. A inteligência artificial responde com linguagem inspirada nos ensinamentos cristãos e referências bíblicas.</p>
+          <div class="chat-wrap">
+            <div class="chat-messages" id="chatMessages">
+              <div class="msg assistant">
+                <div>
+                  <div class="msg-label">Jesus · IA de Reflexão</div>
+                  <div class="bubble">
+                    Que bom ter você aqui. Conte o que está pesando no seu coração hoje. Podemos refletir juntos, com calma.
+                    <div class="ref-chip">Mateus 11:28</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="chips">
+              <button class="chip" onclick="quickChat('Estou com medo do futuro.')">Medo do futuro</button>
+              <button class="chip" onclick="quickChat('Preciso perdoar alguém.')">Perdão</button>
+              <button class="chip" onclick="quickChat('Estou me sentindo sozinho.')">Solidão</button>
+              <button class="chip" onclick="quickChat('Quero agradecer por algo bom.')">Gratidão</button>
+            </div>
+            <div class="composer">
+              <textarea id="chatInput" rows="1" placeholder="Escreva o que você está sentindo..."></textarea>
+              <button class="send" onclick="sendMessage()">➤</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" id="bible">
+          <h2 class="screen-title">Versículos</h2>
+          <p class="screen-sub">Busque por sentimentos, temas ou momentos da vida.</p>
+          <div class="searchbar">⌕ <input id="verseSearch" placeholder="Ex.: ansiedade, família, coragem..." oninput="filterVerses()"/></div>
+          <div class="theme-row">
+            <button class="theme active" onclick="setTheme(this,'todos')">Todos</button>
+            <button class="theme" onclick="setTheme(this,'paz')">Paz</button>
+            <button class="theme" onclick="setTheme(this,'coragem')">Coragem</button>
+            <button class="theme" onclick="setTheme(this,'perdao')">Perdão</button>
+            <button class="theme" onclick="setTheme(this,'gratidao')">Gratidão</button>
+          </div>
+          <div class="list" id="verseList"></div>
+        </section>
+
+        <section class="screen" id="prayers">
+          <h2 class="screen-title">Orações</h2>
+          <p class="screen-sub">Escolha uma oração para ler, ouvir ou adaptar.</p>
+          <div class="prayer-player">
+            <div class="eyebrow">Agora tocando</div>
+            <h3 id="playerTitle">Oração para acalmar o coração</h3>
+            <p id="playerText">Senhor, acolhe meus pensamentos e me ajuda a descansar na tua presença. Dá-me serenidade para viver um passo de cada vez.</p>
+            <div class="progress"><span id="progressBar"></span></div>
+            <div class="player-actions">
+              <button onclick="stopPrayer()">■</button>
+              <button class="play" onclick="togglePrayer()">▶</button>
+              <button onclick="restartPrayer()">↻</button>
+            </div>
+          </div>
+          
+          <div class="notice"><strong>Voz do BETA:</strong> a oração usa a voz disponível no seu navegador.</div>
+          <div class="list" id="prayerList"></div>
+        </section>
+
+        <section class="screen" id="profile">
+          <h2 class="screen-title">Seu espaço</h2>
+          <p class="screen-sub">Preferências para deixar a experiência mais pessoal.</p>
+          <div class="profile-card">
+            <div class="eyebrow">Conta Conectada</div>
+            <h3 id="userEmailDisplay" style="font-size:14px;word-break:break-all;">Carregando...</h3>
+            <button class="secondary" style="margin-top:10px" onclick="logoutUser()">Sair da Conta</button>
+          </div>
+          <div class="profile-card">
+            <h3>Preferências</h3>
+            <div class="setting"><div class="left"><strong>Lembrete diário</strong><span>Uma reflexão por dia</span></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+            <div class="setting"><div class="left"><strong>Som ambiente</strong><span>Áudio leve durante orações</span></div><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+          </div>
+          <div class="profile-card">
+            <h3>Histórico no Supabase</h3>
+            <div id="historyPreview" style="font-size:11px;color:var(--muted);line-height:1.6">Carregando histórico...</div>
+            <button class="secondary" style="margin-top:12px" onclick="clearHistory()">Limpar histórico</button>
+          </div>
+        </section>
+      </main>
+
+      <nav class="nav">
+        <button class="active" data-screen="home" onclick="go('home',this)"><span class="ni">⌂</span>Início</button>
+        <button data-screen="chat" onclick="go('chat',this)"><span class="ni">◌</span>Conversa</button>
+        <button data-screen="bible" onclick="go('bible',this)"><span class="ni">▤</span>Bíblia</button>
+        <button data-screen="prayers" onclick="go('prayers',this)"><span class="ni">♫</span>Orações</button>
+        <button data-screen="profile" onclick="go('profile',this)"><span class="ni">◎</span>Perfil</button>
+      </nav>
+
+      <div class="modal" id="infoModal" onclick="if(event.target===this) closeInfo()">
+        <div class="sheet">
+          <div class="eyebrow">Sobre este BETA</div>
+          <h2>Uma experiência de fé com IA — com responsabilidade.</h2>
+          <p>O aplicativo simula uma conversa em linguagem inspirada nos Evangelhos e conecta respostas a referências bíblicas.</p>
+          <div class="sheet-actions"><button class="primary" onclick="closeInfo()">Entendi</button></div>
+        </div>
+      </div>
+
+      <div class="modal" id="prayerModal" onclick="if(event.target===this) closePrayerComposer()">
+        <div class="sheet">
+          <div class="eyebrow">Criar oração</div>
+          <h2>Por que você quer orar hoje?</h2>
+          <p>Escolha uma intenção. O BETA monta uma oração curta para você.</p>
+          <div class="sheet-actions">
+            <button class="secondary" onclick="makePrayer('família')">Minha família</button>
+            <button class="secondary" onclick="makePrayer('trabalho')">Trabalho e decisões</button>
+            <button class="secondary" onclick="makePrayer('ansiedade')">Ansiedade e paz</button>
+            <button class="secondary" onclick="makePrayer('gratidão')">Gratidão</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="onboarding" id="onboarding">
+        <div>
+          <div class="pill">BETA INTERATIVO</div>
+          <div class="cross">†</div>
+          <h1>Conversando<br>com Jesus</h1>
+          <p>Entre ou crie sua conta gratuita para salvar suas conversas e acessar de qualquer dispositivo.</p>
+          
+          <div class="auth-form">
+            <input type="email" id="authEmail" class="auth-input" placeholder="Seu e-mail" />
+            <input type="password" id="authPassword" class="auth-input" placeholder="Sua senha" />
+            <div class="auth-row">
+              <button class="btn-signin" onclick="handleLogin()">Entrar</button>
+              <button class="btn-signup" onclick="handleSignUp()">Criar Conta</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <small>Importante: a IA não é Jesus e não fala em nome de Deus. O conteúdo serve como apoio de reflexão e fé.</small>
+        </div>
+      </div>
+
+      <div class="toast" id="toast">Salvo</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// CONFIGURAÇÃO SEGURA DE CREDENCIAIS
+// ==========================================
+// Para proteger suas chaves, você pode configurá-las no ambiente da Vercel
+// ou substituí-las abaixo de forma segura para os seus testes locais.
+const SUPABASE_URL_VAL = 'https://avruhxxolrewghrxglbu.supabase.co';
+const SUPABASE_KEY_VAL = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2cnVoeHhvbHJld2docnhnbGJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NzkwMTksImV4cCI6MjEwMzM1NTAxOX0.stzmjx3zlZrm10pY8qlqRw9r62aFaICgZ2dZnRCKSVk'; // Cole sua chave anon public do Supabase aqui
+// Puxa a chave automaticamente da Vercel ou usa um valor padrão local para testes
+const GEMINI_KEY_VAL = window.ENV_GEMINI_KEY || 'SUA_CHAVE_GEMINI_API_KEY_AQUI';
+
+const db = window.supabase.createClient(SUPABASE_URL_VAL, SUPABASE_KEY_VAL);
+let currentUser = null;
+
+async function initAuth() {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    document.getElementById('onboarding').classList.add('hidden');
+    document.getElementById('userEmailDisplay').textContent = currentUser.email;
+    loadHistoryFromSupabase();
+  }
+}
+initAuth();
+
+async function handleLogin() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value.trim();
+  if(!email || !password) { showToast('Preencha e-mail e senha'); return; }
+
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if (error) {
+    showToast('Erro: ' + error.message);
+  } else {
+    currentUser = data.user;
+    document.getElementById('onboarding').classList.add('hidden');
+    document.getElementById('userEmailDisplay').textContent = currentUser.email;
+    loadHistoryFromSupabase();
+    showToast('Login realizado com sucesso!');
+  }
+}
+
+async function handleSignUp() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value.trim();
+  
+  if(!email || !password) { 
+    showToast('Preencha e-mail e senha'); 
+    return; 
+  }
+
+  showToast('Criando conta...');
+
+  const { data, error } = await db.auth.signUp({ email, password });
+  if (error) {
+    showToast('Erro: ' + error.message);
+    return;
+  }
+
+  if (data && data.user) {
+    await db.from('profiles').insert([{ id: data.user.id, email: data.user.email }]);
+  }
+  showToast('Conta criada com sucesso! Faça o login.');
+}
+
+async function logoutUser() {
+  await db.auth.signOut();
+  currentUser = null;
+  document.getElementById('onboarding').classList.remove('hidden');
+  showToast('Você saiu da conta');
+}
+
+const verses = [
+  {theme:'paz',ref:'Filipenses 4:6–7',text:'Em vez de carregar tudo sozinho, apresente suas preocupações a Deus e busque a paz que guarda o coração.',key:'ansiedade paz preocupação'},
+  {theme:'coragem',ref:'Isaías 41:10',text:'Não viva dominado pelo medo: confie que Deus permanece com você e pode lhe dar força.',key:'medo coragem força futuro'},
+  {theme:'perdao',ref:'Efésios 4:32',text:'Escolha a bondade e a compaixão, aprendendo a perdoar como também recebemos perdão.',key:'perdão perdoar mágoa'},
+  {theme:'gratidao',ref:'1 Tessalonicenses 5:18',text:'Cultive gratidão mesmo em dias imperfeitos; reconhecer o bem também é uma forma de oração.',key:'gratidão agradecer'},
+  {theme:'paz',ref:'Mateus 11:28',text:'Quando o peso estiver grande demais, aproxime-se de Cristo e encontre descanso para a alma.',key:'cansaço descanso exausto'},
+  {theme:'coragem',ref:'Josué 1:9',text:'Siga com coragem: você não precisa enfrentar cada passo acreditando que está sozinho.',key:'coragem decisão caminho'},
+  {theme:'perdao',ref:'Mateus 6:14',text:'O perdão não apaga o que aconteceu, mas pode interromper o ciclo que mantém o coração preso.',key:'perdão relação dor'},
+  {theme:'gratidao',ref:'Salmos 118:24',text:'Receba o dia presente como uma oportunidade de reconhecer a vida, a graça e novos começos.',key:'dia alegria gratidão'}
+];
+
+const prayers = [
+  {title:'Acalmar o coração',time:'2 min',text:'Senhor, acolhe meus pensamentos e me ajuda a descansar na tua presença. Dá-me serenidade para viver um passo de cada vez, sabedoria para distinguir o que posso mudar e confiança para entregar o que foge das minhas mãos.'},
+  {title:'Antes de dormir',time:'3 min',text:'Deus, obrigado por este dia. Recebe o que eu não consegui resolver, perdoa minhas falhas, protege minha casa e permite que eu descanse com o coração mais leve. Que amanhã eu recomece com fé.'},
+  {title:'Por uma decisão difícil',time:'2 min',text:'Senhor, ilumina minhas escolhas. Afasta a pressa, o medo e o orgulho. Dá-me clareza para enxergar o que é verdadeiro, coragem para fazer o que é justo e paz para aceitar o caminho que se abrir.'},
+  {title:'Pela família',time:'3 min',text:'Deus, cuida da minha família. Fortalece nossos vínculos, ensina-nos a conversar com respeito, perdoar com sinceridade e apoiar uns aos outros nos dias difíceis. Que nossa casa seja lugar de paz.'}
+];
+
+let selectedTheme='todos', favorite=false, speaking=false, currentPrayer=0, synth=window.speechSynthesis;
+
+function go(id,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.screen===id));
+}
+function openInfo(){document.getElementById('infoModal').classList.add('show')}
+function closeInfo(){document.getElementById('infoModal').classList.remove('show')}
+function openPrayerComposer(){document.getElementById('prayerModal').classList.add('show')}
+function closePrayerComposer(){document.getElementById('prayerModal').classList.remove('show')}
+function showToast(t){let el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2000)}
+
+function renderVerses(){
+  const q=(document.getElementById('verseSearch')?.value||'').toLowerCase();
+  const list=document.getElementById('verseList');
+  const data=verses.filter(v=>(selectedTheme==='todos'||v.theme===selectedTheme) && (!q || (v.text+' '+v.ref+' '+v.key).toLowerCase().includes(q)));
+  list.innerHTML=data.map(v=>`<div class="item"><div class="item-icon">📖</div><div class="item-copy"><strong>${v.ref}</strong><span>${v.text}</span></div><button class="mini-btn" onclick='sendVerseToChat(${JSON.stringify(v.ref)},${JSON.stringify(v.text)})'>Conversar</button></div>`).join('') || '<div class="notice">Nenhum versículo encontrado para essa busca.</div>';
+}
+function filterVerses(){renderVerses()}
+function setTheme(el,theme){selectedTheme=theme;document.querySelectorAll('.theme').forEach(x=>x.classList.remove('active'));el.classList.add('active');renderVerses()}
+function sendVerseToChat(ref,text){go('chat');addUser(`Quero refletir sobre ${ref}.`);setTimeout(()=>addAssistant(`Vamos olhar para essa mensagem com calma. ${text} O que, nessa passagem, toca mais diretamente o que você está vivendo agora?`,ref),400)}
+function shuffleVerse(){
+  const v=verses[Math.floor(Math.random()*verses.length)];
+  document.getElementById('verseText').textContent='“'+v.text+'”';
+  document.getElementById('verseRef').textContent=v.ref+' · paráfrase';
+}
+function toggleFavorite(){favorite=!favorite;document.querySelector('.heart').textContent=favorite?'♥':'♡';showToast(favorite?'Versículo salvo':'Removido dos salvos')}
+
+function renderPrayers(){
+  document.getElementById('prayerList').innerHTML=prayers.map((p,i)=>`<div class="item"><div class="item-icon">🙏</div><div class="item-copy"><strong>${p.title}</strong><span>${p.time} · toque para ouvir</span></div><button class="mini-btn" onclick="selectPrayer(${i})">Ouvir</button></div>`).join('');
+}
+function selectPrayer(i){currentPrayer=i;document.getElementById('playerTitle').textContent=prayers[i].title;document.getElementById('playerText').textContent=prayers[i].text;stopPrayer();togglePrayer()}
+function togglePrayer(){
+  if(!('speechSynthesis' in window)){showToast('Áudio não disponível neste navegador');return}
+  if(speaking){synth.pause();speaking=false;showToast('Oração pausada');return}
+  if(synth.paused){synth.resume();speaking=true;return}
+  const u=new SpeechSynthesisUtterance(prayers[currentPrayer].text);u.lang='pt-BR';u.rate=.88;u.pitch=.95;
+  u.onend=()=>{speaking=false;document.getElementById('progressBar').style.width='100%'}
+  synth.cancel();synth.speak(u);speaking=true;document.getElementById('progressBar').style.width='62%';
+}
+function stopPrayer(){if(synth){synth.cancel()} speaking=false;document.getElementById('progressBar').style.width='0%'}
+function restartPrayer(){stopPrayer();setTimeout(togglePrayer,100)}
+function makePrayer(type){
+  closePrayerComposer();
+  const map={
+    'família':'Senhor, visita minha família com paz. Ajuda-nos a cuidar uns dos outros, a falar com mais amor e a atravessar juntos o que estiver difícil. Amém.',
+    'trabalho':'Senhor, guia minhas decisões no trabalho. Dá-me clareza, honestidade, coragem e paciência. Amém.',
+    'ansiedade':'Senhor, meu coração está acelerado e meus pensamentos estão cheios. Ajuda-me a respirar, a viver o presente e a entregar a Ti o que não consigo controlar. Amém.',
+    'gratidão':'Senhor, hoje eu quero agradecer. Obrigado pela vida, pelas pessoas e pelos pequenos sinais de cuidado. Amém.'
+  };
+  go('prayers');prayers.unshift({title:'Oração personalizada · '+type,time:'1 min',text:map[type]});currentPrayer=0;renderPrayers();selectPrayer(0)
+}
+
+// ==========================================
+// FUNÇÕES DE CHAT BLINDADAS E IA CORRIGIDA
+// ==========================================
+
+async function addUser(text, ref = null){
+  const box=document.getElementById('chatMessages');
+  box.insertAdjacentHTML('beforeend',`<div class="msg user"><div class="bubble">${escapeHtml(text)}</div></div>`);
+  box.scrollTop=box.scrollHeight;
+
+  // Tenta salvar no Supabase, mas se falhar, não quebra o app
+  if(currentUser) {
+    try {
+      await db.from('conversations').insert([{ user_id: currentUser.id, role: 'user', content: text, bible_ref: ref }]);
+    } catch(err) { console.log("Aviso ao salvar no banco:", err); }
+  }
+}
+
+async function addAssistant(text, ref = null){
+  const box=document.getElementById('chatMessages');
+  box.insertAdjacentHTML('beforeend',`<div class="msg assistant"><div><div class="msg-label">Jesus · IA de Reflexão</div><div class="bubble">${text}${ref?`<div class="ref-chip">${ref}</div>`:''}</div></div></div>`);
+  box.scrollTop=box.scrollHeight;
+
+  if(currentUser) {
+    try {
+      await db.from('conversations').insert([{ user_id: currentUser.id, role: 'assistant', content: text, bible_ref: ref }]);
+    } catch(err) { console.log("Aviso ao salvar no banco:", err); }
+  }
+}
+
+function addTyping(){
+  const box=document.getElementById('chatMessages');
+  box.insertAdjacentHTML('beforeend',`<div class="msg assistant" id="typing"><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>`);
+  box.scrollTop=box.scrollHeight;
+}
+
+async function sendMessage(){
+  const input=document.getElementById('chatInput');
+  const t=input.value.trim();
+  if(!t) return;
+  
+  input.value='';
+  addUser(t);
+  addTyping();
+
+  try {
+    // Chama a função serverless (api/chat.js), que guarda a chave no servidor
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: t })
+    });
+
+    const data = await response.json();
+    document.getElementById('typing')?.remove();
+
+    if(response.ok && data.text) {
+      addAssistant(data.text, null);
+    } else {
+      console.error("Retorno da API /api/chat:", data);
+      addAssistant("Que a paz esteja com você. Pensemos com calma sobre isso hoje.", "Salmos 46:1");
+    }
+
+  } catch(e) {
+    document.getElementById('typing')?.remove();
+    console.error("Erro na requisição da IA:", e);
+    addAssistant("Houve um pequeno problema de conexão com a inteligência artificial. Tente novamente em instantes.", "Filipenses 4:6");
+  }
+}
+
+function quickChat(t){go('chat');setTimeout(()=>{document.getElementById('chatInput').value=t;sendMessage()},80)}
+document.getElementById('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}})
+
+function startDemoConversation(){
+  go('chat');
+  const box=document.getElementById('chatMessages');
+  if(!document.getElementById('demoIntro')){
+    box.insertAdjacentHTML('beforeend',`
+      <div class="msg assistant" id="demoIntro">
+        <div>
+          <div class="msg-label">Modo demonstração</div>
+          <div class="bubble">
+            Você pode escrever qualquer coisa abaixo. Exemplos:
+            <div style="margin-top:8px;line-height:1.7">
+              “Estou com medo de perder meu emprego.”<br>
+              “Eu briguei com alguém e não sei se devo perdoar.”
+            </div>
+          </div>
+        </div>
+      </div>`);
+  }
+  document.getElementById('chatInput').focus();
+  box.scrollTop=box.scrollHeight;
+}
+
+async function loadHistoryFromSupabase(){
+  if(!currentUser) return;
+  const { data, error } = await db
+    .from('conversations')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(3);
+
+  const el=document.getElementById('historyPreview');
+  if(error || !data || data.length === 0) {
+    el.innerHTML = 'Nenhuma conversa salva no Supabase ainda.';
+    return;
+  }
+  el.innerHTML = data.map(x=>'• '+escapeHtml(x.content.slice(0,70))+(x.content.length>70?'…':'')).join('<br>');
+}
+
+async function clearHistory(){
+  if(!currentUser) return;
+  await db.from('conversations').delete().eq('user_id', currentUser.id);
+  loadHistoryFromSupabase();
+  showToast('Histórico limpo do banco');
+}
+
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+
+renderVerses();renderPrayers();
+</script>
+</body>
+</html>

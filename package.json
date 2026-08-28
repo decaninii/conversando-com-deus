@@ -1,0 +1,6 @@
+{
+  "name": "conversando-com-deus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App de reflexão cristã com IA (Gemini) via função serverless na Vercel"
+}
