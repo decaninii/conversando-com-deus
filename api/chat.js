@@ -47,8 +47,9 @@ Se não houver referência relevante, use "reference": null.`;
         systemInstruction: { role: 'system', parts: [{ text: promptSistema }] },
         contents,
         generationConfig: {
-          maxOutputTokens: 220,
-          responseMimeType: 'application/json'
+          maxOutputTokens: 400,
+          responseMimeType: 'application/json',
+          thinkingConfig: { thinkingBudget: 0 }
         }
       })
     });
