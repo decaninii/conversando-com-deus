@@ -287,9 +287,9 @@
               <button class="chip" onclick="quickChat('Estou me sentindo sozinho.')">Solidão</button>
               <button class="chip" onclick="quickChat('Quero agradecer por algo bom.')">Gratidão</button>
             </div>
-            <div style="display:flex;gap:8px;margin-bottom:8px">
-              <button class="secondary" style="flex:1" onclick="saveConversation()">💾 Salvar conversa</button>
-              <button class="secondary" style="flex:1" onclick="clearConversation()">🗑️ Limpar</button>
+            <div style="display:flex;justify-content:flex-end;gap:16px;padding:2px 4px 8px">
+              <button class="link" onclick="saveConversation()">Salvar conversa</button>
+              <button class="link" style="color:var(--muted)" onclick="clearConversation()">Limpar</button>
             </div>
             <div class="composer">
               <textarea id="chatInput" rows="1" placeholder="Escreva o que você está sentindo..."></textarea>
