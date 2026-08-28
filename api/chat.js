@@ -32,15 +32,15 @@ Responda SEMPRE em JSON puro (sem markdown, sem crases, sem texto fora do JSON),
 Se não houver referência relevante, use "reference": null.`;
 
     // Monta o histórico de turnos no formato que o Gemini espera
+    // (limitado às últimas mensagens para economizar tokens e evitar payloads muito grandes)
+    const historicoLimitado = Array.isArray(history) ? history.slice(-12) : [];
     const contents = [];
-    if (Array.isArray(history)) {
-      for (const turn of history) {
-        if (!turn?.text) continue;
-        contents.push({
-          role: turn.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: turn.text }]
-        });
-      }
+    for (const turn of historicoLimitado) {
+      if (!turn?.text) continue;
+      contents.push({
+        role: turn.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: turn.text }]
+      });
     }
     contents.push({ role: 'user', parts: [{ text: message }] });
 
