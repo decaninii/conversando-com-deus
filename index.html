@@ -433,13 +433,13 @@ const db = window.supabase.createClient(SUPABASE_URL_VAL, SUPABASE_KEY_VAL, {
   global: { headers: { apikey: SUPABASE_KEY_VAL } }
 });
 let currentUser = null;
+let profileEnsured = false;
 
 async function ensureProfile(user){
-  if(!user) return;
-  // upsert: cria o perfil se não existir, e não dá erro se já existir.
-  // Isso corrige contas antigas que ficaram sem perfil e travam o salvamento de conversas.
+  if(!user || profileEnsured) return;
   const { error } = await db.from('profiles').upsert([{ id: user.id, email: user.email }], { onConflict: 'id' });
-  if (error) console.error('Erro ao garantir perfil no Supabase:', error.message, error);
+  if (error) { console.error('Erro ao garantir perfil no Supabase:', error.message, error); return; }
+  profileEnsured = true;
 }
 
 async function initAuth() {
@@ -524,6 +524,7 @@ async function handleSignUp() {
 async function logoutUser() {
   await db.auth.signOut();
   currentUser = null;
+  profileEnsured = false;
   document.getElementById('onboarding').classList.remove('hidden');
   showToast('Você saiu da conta');
 }
@@ -612,6 +613,7 @@ async function addUser(text, ref = null){
   box.scrollTop=box.scrollHeight;
 
   if(currentUser) {
+    await ensureProfile(currentUser);
     const { error } = await db.from('conversations').insert([{ user_id: currentUser.id, role: 'user', content: text, bible_ref: ref }]);
     if (error) console.error('Erro ao salvar mensagem do usuário no Supabase:', error.message, error);
   }
