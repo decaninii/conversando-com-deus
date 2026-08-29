@@ -207,6 +207,9 @@
   .auth-row button{flex:1;padding:12px;border-radius:14px;font-weight:700;font-size:12px}
   .btn-signin{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#201a12;border:0}
   .btn-signup{background:transparent;color:#edce8f;border:1px solid rgba(216,178,102,.4)}
+  .onboarding .theme-row{justify-content:center}
+  .onboarding .theme{background:transparent;border:1px solid rgba(216,178,102,.3);color:#cfc6ba}
+  .onboarding .theme.active{background:rgba(216,178,102,.16);border-color:rgba(216,178,102,.5);color:#edce8f}
 
   .onboarding small{display:block;color:#948a7f;font-size:9px;line-height:1.45;text-align:center}
   .toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:#1f1b17;color:#fff;padding:9px 12px;border-radius:999px;font-size:10px;opacity:0;pointer-events:none;transition:.2s;z-index:80;white-space:nowrap}
@@ -394,14 +397,16 @@
           <h1>Conversando<br>com Jesus</h1>
           <p>Entre ou crie sua conta gratuita para salvar suas conversas e acessar de qualquer dispositivo.</p>
           
-          <div class="auth-form">
-            <input type="email" id="authEmail" class="auth-input" placeholder="Seu e-mail" />
-            <input type="password" id="authPassword" class="auth-input" placeholder="Sua senha" />
-            <div class="auth-row">
-              <button class="btn-signin" onclick="handleLogin()">Entrar</button>
-              <button class="btn-signup" onclick="handleSignUp()">Criar Conta</button>
-            </div>
+          <div class="theme-row" style="justify-content:center;margin-bottom:14px">
+            <button class="theme active" id="authTabLogin" onclick="setAuthTab('login')">Entrar</button>
+            <button class="theme" id="authTabSignup" onclick="setAuthTab('signup')">Criar conta</button>
           </div>
+
+          <form class="auth-form" id="authForm" onsubmit="event.preventDefault(); submitAuth();">
+            <input type="email" id="authEmail" class="auth-input" placeholder="Seu e-mail" enterkeyhint="next" autocomplete="email" required />
+            <input type="password" id="authPassword" class="auth-input" placeholder="Sua senha" enterkeyhint="go" autocomplete="current-password" required />
+            <button type="submit" class="btn-signin" id="authSubmitBtn" style="width:100%">Entrar</button>
+          </form>
         </div>
         <div>
           <small>Importante: a IA não é Jesus e não fala em nome de Deus. O conteúdo serve como apoio de reflexão e fé.</small>
@@ -424,7 +429,9 @@ const SUPABASE_KEY_VAL = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 // Puxa a chave automaticamente da Vercel ou usa um valor padrão local para testes
 const GEMINI_KEY_VAL = window.ENV_GEMINI_KEY || 'SUA_CHAVE_GEMINI_API_KEY_AQUI';
 
-const db = window.supabase.createClient(SUPABASE_URL_VAL, SUPABASE_KEY_VAL);
+const db = window.supabase.createClient(SUPABASE_URL_VAL, SUPABASE_KEY_VAL, {
+  global: { headers: { apikey: SUPABASE_KEY_VAL } }
+});
 let currentUser = null;
 
 async function initAuth() {
@@ -437,6 +444,20 @@ async function initAuth() {
   }
 }
 initAuth();
+
+let authMode = 'login';
+
+function setAuthTab(mode){
+  authMode = mode;
+  document.getElementById('authTabLogin').classList.toggle('active', mode === 'login');
+  document.getElementById('authTabSignup').classList.toggle('active', mode === 'signup');
+  document.getElementById('authSubmitBtn').textContent = mode === 'login' ? 'Entrar' : 'Criar conta';
+}
+
+function submitAuth(){
+  if(authMode === 'login') handleLogin();
+  else handleSignUp();
+}
 
 async function handleLogin() {
   const email = document.getElementById('authEmail').value.trim();
@@ -472,10 +493,23 @@ async function handleSignUp() {
     return;
   }
 
-  if (data && data.user) {
-    await db.from('profiles').insert([{ id: data.user.id, email: data.user.email }]);
+  if (data?.user) {
+    const { error: profileError } = await db.from('profiles').insert([{ id: data.user.id, email: data.user.email }]);
+    if (profileError) console.error('Erro ao criar perfil no Supabase:', profileError.message, profileError);
   }
-  showToast('Conta criada com sucesso! Faça o login.');
+
+  if (data?.session) {
+    // Projeto sem confirmação de e-mail obrigatória: já entra direto, sem precisar logar de novo
+    currentUser = data.user;
+    document.getElementById('onboarding').classList.add('hidden');
+    document.getElementById('userEmailDisplay').textContent = currentUser.email;
+    loadHistoryFromSupabase();
+    showToast('Conta criada! Bem-vindo(a).');
+  } else {
+    // Projeto exige confirmação por e-mail: leva para a aba de login já com o e-mail preenchido
+    setAuthTab('login');
+    showToast('Conta criada! Confirme seu e-mail e depois toque em Entrar.');
+  }
 }
 
 async function logoutUser() {
@@ -568,11 +602,9 @@ async function addUser(text, ref = null){
   box.insertAdjacentHTML('beforeend',`<div class="msg user"><div class="bubble">${escapeHtml(text)}</div></div>`);
   box.scrollTop=box.scrollHeight;
 
-  // Tenta salvar no Supabase, mas se falhar, não quebra o app
   if(currentUser) {
-    try {
-      await db.from('conversations').insert([{ user_id: currentUser.id, role: 'user', content: text, bible_ref: ref }]);
-    } catch(err) { console.log("Aviso ao salvar no banco:", err); }
+    const { error } = await db.from('conversations').insert([{ user_id: currentUser.id, role: 'user', content: text, bible_ref: ref }]);
+    if (error) console.error('Erro ao salvar mensagem do usuário no Supabase:', error.message, error);
   }
 }
 
@@ -582,9 +614,8 @@ async function addAssistant(text, ref = null){
   box.scrollTop=box.scrollHeight;
 
   if(currentUser) {
-    try {
-      await db.from('conversations').insert([{ user_id: currentUser.id, role: 'assistant', content: text, bible_ref: ref }]);
-    } catch(err) { console.log("Aviso ao salvar no banco:", err); }
+    const { error } = await db.from('conversations').insert([{ user_id: currentUser.id, role: 'assistant', content: text, bible_ref: ref }]);
+    if (error) console.error('Erro ao salvar resposta da IA no Supabase:', error.message, error);
   }
 }
 
