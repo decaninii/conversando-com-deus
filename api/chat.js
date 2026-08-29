@@ -44,9 +44,21 @@ Se não houver referência relevante, use "reference": null.`;
     }
     contents.push({ role: 'user', parts: [{ text: message }] });
 
+    // Proteção extra: o Gemini exige alternância estrita user/model.
+    // Se por algum motivo dois turnos seguidos tiverem o mesmo papel, funde o texto em um só turno.
+    const contentsAlternados = [];
+    for (const turno of contents) {
+      const anterior = contentsAlternados[contentsAlternados.length - 1];
+      if (anterior && anterior.role === turno.role) {
+        anterior.parts[0].text += '\n' + turno.parts[0].text;
+      } else {
+        contentsAlternados.push({ role: turno.role, parts: [{ text: turno.parts[0].text }] });
+      }
+    }
+
     const requestBody = {
       systemInstruction: { role: 'system', parts: [{ text: promptSistema }] },
-      contents,
+      contents: contentsAlternados,
       safetySettings: [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
         { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },

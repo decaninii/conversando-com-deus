@@ -664,13 +664,17 @@ async function sendMessage(){
       conversationHistory.push({ role: 'assistant', text: data.text });
     } else {
       console.error("Retorno da API /api/chat:", data);
-      addAssistant("Que a paz esteja com você. Pensemos com calma sobre isso hoje.", "Salmos 46:1");
+      const fallbackText = "Que a paz esteja com você. Pensemos com calma sobre isso hoje.";
+      addAssistant(fallbackText, "Salmos 46:1");
+      conversationHistory.push({ role: 'assistant', text: fallbackText });
     }
 
   } catch(e) {
     document.getElementById('typing')?.remove();
     console.error("Erro na requisição da IA:", e);
-    addAssistant("Houve um pequeno problema de conexão com a inteligência artificial. Tente novamente em instantes.", "Filipenses 4:6");
+    const fallbackText = "Houve um pequeno problema de conexão com a inteligência artificial. Tente novamente em instantes.";
+    addAssistant(fallbackText, "Filipenses 4:6");
+    conversationHistory.push({ role: 'assistant', text: fallbackText });
   }
 }
 
